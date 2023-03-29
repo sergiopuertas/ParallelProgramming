@@ -34,7 +34,6 @@ int main(int argc, char *argv[])
     n = atoi(argv[1]);
     L = *argv[2];
 
-    MPI_Status status;
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs); // 3. get number of processes
     MPI_Comm_rank(MPI_COMM_WORLD , &rank); // 4. get self rank
@@ -42,16 +41,16 @@ int main(int argc, char *argv[])
     if(rank==0){
         n = atoi(argv[1]);
         L = *argv[2];
-        for (int j = 1; j <= numprocs; ++j) {
+        for (int j = 1; j < numprocs; ++j) {
             MPI_Send(&n ,1,MPI_INT ,j,0,MPI_COMM_WORLD);
             MPI_Send(&L ,1,MPI_CHAR ,j,0,MPI_COMM_WORLD);
         }
     }
     else{
-        for (int j = 1; j <= numprocs; ++j) {
-            MPI_Recv(&n ,1,MPI_INT ,MPI_ANY_SOURCE,0,MPI_COMM_WORLD,&status);
-            MPI_Recv(&L ,1,MPI_CHAR ,MPI_ANY_SOURCE,0,MPI_COMM_WORLD,&status);
-        }
+
+        MPI_Recv(&n ,1,MPI_INT ,0,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+        MPI_Recv(&L ,1,MPI_CHAR ,0,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
+
     }
 
     cadena = (char *) malloc(n*sizeof(char));
@@ -68,14 +67,15 @@ int main(int argc, char *argv[])
     }
     else{
         int cnt = 0;
-        for (int j = 1; j <= numprocs; ++j) {
-            MPI_Recv(&cnt ,1,MPI_INT ,MPI_ANY_SOURCE,0,MPI_COMM_WORLD,&status);
+        for (int j = 1; j < numprocs; ++j) {
+            MPI_Recv(&cnt ,1,MPI_INT ,MPI_ANY_SOURCE,0,MPI_COMM_WORLD,MPI_STATUS_IGNORE);
             count += cnt;
         }
     }
+    if(rank == 0){
+        printf("El numero de apariciones de la letra %c es %d\n", L, count);
 
-
-    printf("El numero de apariciones de la letra %c es %d\n", L, count);
+    }
     free(cadena);
     MPI_Finalize();
     exit(0);

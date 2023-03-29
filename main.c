@@ -49,8 +49,8 @@ int main(int argc, char *argv[])
     }
     else{
         for (int j = 1; j <= numprocs; ++j) {
-            MPI_Recv(&n ,1,MPI_INT ,j,0,MPI_COMM_WORLD,&status);
-            MPI_Recv(&L ,1,MPI_CHAR ,j,0,MPI_COMM_WORLD,&status);
+            MPI_Recv(&n ,1,MPI_INT ,MPI_ANY_SOURCE,0,MPI_COMM_WORLD,&status);
+            MPI_Recv(&L ,1,MPI_CHAR ,MPI_ANY_SOURCE,0,MPI_COMM_WORLD,&status);
         }
     }
 
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
     else{
         int cnt = 0;
         for (int j = 1; j <= numprocs; ++j) {
-            MPI_Recv(&cnt ,1,MPI_INT ,j,0,MPI_COMM_WORLD,&status);
+            MPI_Recv(&cnt ,1,MPI_INT ,MPI_ANY_SOURCE,0,MPI_COMM_WORLD,&status);
             count += cnt;
         }
     }

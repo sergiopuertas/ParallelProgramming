@@ -23,9 +23,9 @@ int MPI_BinomialBcast(void *buf, int count, MPI_Datatype datatype, int root, MPI
     int depth = (int) (log2(numprocs));
     int i;
     int partner;
-    for (i = 0; i < depth; i++) {
+    for (i = 1; i <= depth; i++) {
         partner= rank + (int) pow(2, i-1);
-        if (partner < numprocs)  {
+        if (partner < numprocs){
             if (rank < (int) pow(2, i-1)) {
                 printf("proc %d sends to partner %d\n", rank, partner);
                 MPI_Send(buf, count, datatype, partner, 0, comm);
@@ -34,13 +34,10 @@ int MPI_BinomialBcast(void *buf, int count, MPI_Datatype datatype, int root, MPI
                 MPI_Recv(buf, count, datatype, rank, 0, comm, MPI_STATUS_IGNORE);
             }
         }
+        else break;
     }
     return 0;
 }
-
-
-
-
 
 void inicializaCadena(char *cadena, int n){
     int i;
@@ -77,6 +74,10 @@ int main(int argc, char *argv[])
     n = atoi(argv[1]);
     L = *argv[2];
 
+    /*
+    MPI_Bcast(&n ,1,MPI_INT ,0,MPI_COMM_WORLD);
+    MPI_Bcast(&L ,1,MPI_CHAR ,0,MPI_COMM_WORLD);
+     */
     MPI_BinomialBcast(&n ,1,MPI_INT ,0,MPI_COMM_WORLD);
     MPI_BinomialBcast(&L ,1,MPI_CHAR ,0,MPI_COMM_WORLD);
 

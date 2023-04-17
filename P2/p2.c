@@ -60,10 +60,7 @@ void inicializaCadena(char *cadena, int n){
 
 int main(int argc, char *argv[])
 {
-    if(argc != 3){
-        printf("Numero incorrecto de parametros\nLa sintaxis debe ser: program n L\n  program es el nombre del ejecutable\n  n es el tamaño de la cadena a generar\n  L es la letra de la que se quiere contar apariciones (A, C, G o T)\n");
-        exit(1);
-    }
+
 
     int i, n, count=0;
     int numprocs, rank;
@@ -73,7 +70,12 @@ int main(int argc, char *argv[])
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD , &rank);
-
+    if(argc != 3){
+        if (rank==0)
+        printf("Numero incorrecto de parametros\nLa sintaxis debe ser: program n L\n  program es el nombre del ejecutable\n  n es el tamaño de la cadena a generar\n  L es la letra de la que se quiere contar apariciones (A, C, G o T)\n");
+        MPI_Finalize();
+        exit(0);
+    }
     n = atoi(argv[1]);
     L = *argv[2];
 

@@ -24,21 +24,20 @@ int MPI_BinomialBcast(void *buf, int count, MPI_Datatype datatype, int root, MPI
     int i;
     int partner;
     for (i = 1; i <= depth; i++) {
-        partner= rank + (int) pow(2, i-1);
-        if (partner < numprocs){
-            if (rank < (int) pow(2, i-1)) {
+        if (rank < (int) pow(2, i-1)) {
+            partner= rank + (int) pow(2, i-1);
+            if(partner < numprocs) {
                 printf("proc %d sends to partner %d\n", rank, partner);
                 MPI_Send(buf, count, datatype, partner, 0, comm);
             }
-            else{
-                int source = rank - pow(2,i-1);
-                if(source > pow(2,i-1)){//wtf nunca entra al if. debería printear algo pero no lo hace
-                    printf("proc %d receives from source %d\n", rank, source);
-                    MPI_Recv(buf, count, datatype, source, 0, comm, MPI_STATUS_IGNORE);
-                }
+        }
+        else{
+            int source = rank - (int) pow(2, i - 1);
+            if(source < (int) pow(2, i - 1)) {
+                printf("proc %d receives from %d\n", rank, source);
+                MPI_Recv(buf, count, datatype, source, 0, comm, MPI_STATUS_IGNORE);
             }
         }
-        else break;
     }
     return 0;
 }
@@ -95,8 +94,8 @@ int main(int argc, char *argv[])
     }
     int sum = 0;
 
-    //MPI_Reduce(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
-    MPI_FlatreeColective(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
+    MPI_Reduce(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
+    //MPI_FlatreeColective(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
 
     if(rank == 0){
         printf("El numero de apariciones de la letra %c es %d\n", L, sum);

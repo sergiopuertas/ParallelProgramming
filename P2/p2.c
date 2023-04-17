@@ -7,13 +7,17 @@ int MPI_FlatreeColective(void* buf, void* recvbuf, int count, MPI_Datatype datat
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD , &rank);
     MPI_Send(buf ,count,MPI_INT ,root,0,MPI_COMM_WORLD);
+    int ret;
     if(rank == root){
         for (int j = 0; j < numprocs; ++j) {
-            MPI_Recv(buf ,count,datatype ,MPI_ANY_SOURCE,0,comm,MPI_STATUS_IGNORE);
+            ret = MPI_Recv(buf ,count,datatype ,MPI_ANY_SOURCE,0,comm,MPI_STATUS_IGNORE);
+            if(ret == -1){
+                return -1;
+            }
             *(int*) recvbuf += *(int*) buf;
         }
     }
-    return 0;
+    return MPI_SUCCESS;
 }
 
 int MPI_BinomialBcast(void *buf, int count, MPI_Datatype datatype, int root, MPI_Comm comm) {
@@ -21,25 +25,31 @@ int MPI_BinomialBcast(void *buf, int count, MPI_Datatype datatype, int root, MPI
     MPI_Comm_size(comm, &numprocs);
     MPI_Comm_rank(comm, &rank);
     int depth = (int) (log2(numprocs));
-    int i;
-    int partner;
+    int i , partner, ret;
+
     for (i = 1; i <= depth; i++) {
         if (rank < (int) pow(2, i-1)) {
             partner= rank + (int) pow(2, i-1);
             if(partner < numprocs) {
                 printf("proc %d sends to partner %d\n", rank, partner);
-                MPI_Send(buf, count, datatype, partner, 0, comm);
+                ret  = MPI_Send(buf, count, datatype, partner, 0, comm);
+                if(ret == -1){
+                    return -1;
+                }
             }
         }
         else{
             int source = rank - (int) pow(2, i - 1);
             if(source < (int) pow(2, i - 1)) {
                 printf("proc %d receives from %d\n", rank, source);
-                MPI_Recv(buf, count, datatype, source, 0, comm, MPI_STATUS_IGNORE);
+                ret = MPI_Recv(buf, count, datatype, source, 0, comm, MPI_STATUS_IGNORE);
+                if(ret == -1){
+                    return -1;
+                }
             }
         }
     }
-    return 0;
+    return MPI_SUCCESS;
 }
 
 void inicializaCadena(char *cadena, int n){
@@ -60,8 +70,6 @@ void inicializaCadena(char *cadena, int n){
 
 int main(int argc, char *argv[])
 {
-
-
     int i, n, count=0;
     int numprocs, rank;
     char *cadena;

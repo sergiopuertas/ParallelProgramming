@@ -30,8 +30,12 @@ int MPI_BinomialBcast(void *buf, int count, MPI_Datatype datatype, int root, MPI
                 printf("proc %d sends to partner %d\n", rank, partner);
                 MPI_Send(buf, count, datatype, partner, 0, comm);
             }
-            if(rank == partner){
-                MPI_Recv(buf, count, datatype, rank, 0, comm, MPI_STATUS_IGNORE);
+            else{
+                int source = rank - pow(2,i-1);
+                if(source > pow(2,i-1)){//wtf nunca entra al if. debería printear algo pero no lo hace
+                    printf("proc %d receives from source %d\n", rank, source);
+                    MPI_Recv(buf, count, datatype, source, 0, comm, MPI_STATUS_IGNORE);
+                }
             }
         }
         else break;

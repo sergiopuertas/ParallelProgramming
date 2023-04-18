@@ -24,9 +24,8 @@ int MPI_BinomialBcast(void *buf, int count, MPI_Datatype datatype, int root, MPI
     int numprocs, rank;
     MPI_Comm_size(comm, &numprocs);
     MPI_Comm_rank(comm, &rank);
-    int depth = (int) (log2(numprocs));
+    int depth = (int) (ceil(log2(numprocs)));
     int i , partner, ret;
-
     for (i = 1; i <= depth; i++) {
         if (rank < (int) pow(2, i-1)) {
             partner= rank + (int) pow(2, i-1);
@@ -78,21 +77,22 @@ int main(int argc, char *argv[])
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD , &rank);
-    if(argc != 3){
-        if (rank==0)
-        printf("Numero incorrecto de parametros\nLa sintaxis debe ser: program n L\n  program es el nombre del ejecutable\n  n es el tamaño de la cadena a generar\n  L es la letra de la que se quiere contar apariciones (A, C, G o T)\n");
-        MPI_Finalize();
-        exit(0);
-    }
+
     n = atoi(argv[1]);
     L = *argv[2];
 
+    int ret =0;
     /*
-    MPI_Bcast(&n ,1,MPI_INT ,0,MPI_COMM_WORLD);
-    MPI_Bcast(&L ,1,MPI_CHAR ,0,MPI_COMM_WORLD);
+    ret = MPI_Bcast(&n ,1,MPI_INT ,0,MPI_COMM_WORLD);
+    ret = MPI_Bcast(&L ,1,MPI_CHAR ,0,MPI_COMM_WORLD);
      */
-    MPI_BinomialBcast(&n ,1,MPI_INT ,0,MPI_COMM_WORLD);
-    MPI_BinomialBcast(&L ,1,MPI_CHAR ,0,MPI_COMM_WORLD);
+    ret = MPI_BinomialBcast(&n ,1,MPI_INT ,0,MPI_COMM_WORLD);
+    ret = MPI_BinomialBcast(&L ,1,MPI_CHAR ,0,MPI_COMM_WORLD);
+
+    if(ret != 0){
+        printf("Error: MPI_BinomialBcast failed");
+        exit();
+    }
 
     cadena = (char *) malloc(n*sizeof(char));
     inicializaCadena(cadena, n);
@@ -104,9 +104,13 @@ int main(int argc, char *argv[])
     }
     int sum = 0;
 
-    MPI_Reduce(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
-    //MPI_FlatreeColective(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
-
+    ret = 0;
+    //ret = MPI_Reduce(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
+    ret = MPI_FlatreeColective(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
+    if(ret != 0){
+        printf("Error: MPI_BinomialBcast failed");
+        exit();
+    }
     if(rank == 0){
         printf("El numero de apariciones de la letra %c es %d\n", L, sum);
     }

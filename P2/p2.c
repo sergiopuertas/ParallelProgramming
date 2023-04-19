@@ -7,17 +7,17 @@ int MPI_FlatreeColective(void* buf, void* recvbuf, int count, MPI_Datatype datat
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD , &rank);
     MPI_Send(buf ,count,MPI_INT ,root,0,MPI_COMM_WORLD);
-    int ret;
+    int ret = MPI_SUCCESS;
     if(rank == root){
         for (int j = 0; j < numprocs; ++j) {
             ret = MPI_Recv(buf ,count,datatype ,MPI_ANY_SOURCE,0,comm,MPI_STATUS_IGNORE);
-            if(ret == -1){
-                return -1;
+            if(ret != MPI_SUCCESS){
+                return ret;
             }
             *(int*) recvbuf += *(int*) buf;
         }
     }
-    return MPI_SUCCESS;
+    return ret;
 }
 
 int MPI_BinomialBcast(void *buf, int count, MPI_Datatype datatype, int root, MPI_Comm comm) {
@@ -25,15 +25,15 @@ int MPI_BinomialBcast(void *buf, int count, MPI_Datatype datatype, int root, MPI
     MPI_Comm_size(comm, &numprocs);
     MPI_Comm_rank(comm, &rank);
     int depth = (int) (ceil(log2(numprocs)));
-    int i , partner, ret;
+    int i ,partner ,ret = MPI_SUCCESS;
     for (i = 1; i <= depth; i++) {
         if (rank < (int) pow(2, i-1)) {
             partner= rank + (int) pow(2, i-1);
             if(partner < numprocs) {
                 printf("Proc %d sends to partner %d\n", rank, partner);
                 ret  = MPI_Send(buf, count, datatype, partner, 0, comm);
-                if(ret == -1){
-                    return -1;
+                if(ret != MPI_SUCCESS){
+                    return ret;
                 }
             }
         }
@@ -42,13 +42,13 @@ int MPI_BinomialBcast(void *buf, int count, MPI_Datatype datatype, int root, MPI
             if(source < (int) pow(2, i - 1)) {
                 printf("Proc %d receives value from %d\n", rank, source);
                 ret = MPI_Recv(buf, count, datatype, source, 0, comm, MPI_STATUS_IGNORE);
-                if(ret == -1){
-                    return -1;
+                if(ret != 0){
+                    return ret;
                 }
             }
         }
     }
-    return MPI_SUCCESS;
+    return ret;
 }
 
 void inicializaCadena(char *cadena, int n){
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
     n = atoi(argv[1]);
     L = *argv[2];
 
-    int ret =0;
+    int ret;
     /*
     ret = MPI_Bcast(&n ,1,MPI_INT ,0,MPI_COMM_WORLD);
     ret = MPI_Bcast(&L ,1,MPI_CHAR ,0,MPI_COMM_WORLD);
@@ -104,8 +104,8 @@ int main(int argc, char *argv[])
     }
     int sum = 0;
 
-    //ret = MPI_Reduce(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
-    ret = MPI_FlatreeColective(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
+    ret = MPI_Reduce(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
+    //ret = MPI_FlatreeColective(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
     if(ret != 0){
         printf("Error: MPI_BinomialBcast failed");
         exit(ret);

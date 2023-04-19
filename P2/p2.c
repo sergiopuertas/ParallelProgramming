@@ -30,7 +30,7 @@ int MPI_BinomialBcast(void *buf, int count, MPI_Datatype datatype, int root, MPI
         if (rank < (int) pow(2, i-1)) {
             partner= rank + (int) pow(2, i-1);
             if(partner < numprocs) {
-                printf("proc %d sends to partner %d\n", rank, partner);
+                printf("Proc %d sends to partner %d\n", rank, partner);
                 ret  = MPI_Send(buf, count, datatype, partner, 0, comm);
                 if(ret == -1){
                     return -1;
@@ -40,7 +40,7 @@ int MPI_BinomialBcast(void *buf, int count, MPI_Datatype datatype, int root, MPI
         else{
             int source = rank - (int) pow(2, i - 1);
             if(source < (int) pow(2, i - 1)) {
-                printf("proc %d receives from %d\n", rank, source);
+                printf("Proc %d receives value from %d\n", rank, source);
                 ret = MPI_Recv(buf, count, datatype, source, 0, comm, MPI_STATUS_IGNORE);
                 if(ret == -1){
                     return -1;
@@ -87,11 +87,11 @@ int main(int argc, char *argv[])
     ret = MPI_Bcast(&L ,1,MPI_CHAR ,0,MPI_COMM_WORLD);
      */
     ret = MPI_BinomialBcast(&n ,1,MPI_INT ,0,MPI_COMM_WORLD);
-    ret = MPI_BinomialBcast(&L ,1,MPI_CHAR ,0,MPI_COMM_WORLD);
+    ret += MPI_BinomialBcast(&L ,1,MPI_CHAR ,0,MPI_COMM_WORLD);
 
     if(ret != 0){
         printf("Error: MPI_BinomialBcast failed");
-        exit();
+        exit(ret/2);
     }
 
     cadena = (char *) malloc(n*sizeof(char));
@@ -104,12 +104,11 @@ int main(int argc, char *argv[])
     }
     int sum = 0;
 
-    ret = 0;
     //ret = MPI_Reduce(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
     ret = MPI_FlatreeColective(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
     if(ret != 0){
         printf("Error: MPI_BinomialBcast failed");
-        exit();
+        exit(ret);
     }
     if(rank == 0){
         printf("El numero de apariciones de la letra %c es %d\n", L, sum);

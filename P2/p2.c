@@ -82,10 +82,10 @@ int main(int argc, char *argv[])
     L = *argv[2];
 
     int ret;
-    /*
-    ret = MPI_Bcast(&n ,1,MPI_INT ,0,MPI_COMM_WORLD);
-    ret = MPI_Bcast(&L ,1,MPI_CHAR ,0,MPI_COMM_WORLD);
-     */
+
+    //ret = MPI_Bcast(&n ,1,MPI_INT ,0,MPI_COMM_WORLD);
+    //ret = MPI_Bcast(&L ,1,MPI_CHAR ,0,MPI_COMM_WORLD);
+
     ret = MPI_BinomialBcast(&n ,1,MPI_INT ,0,MPI_COMM_WORLD);
     ret += MPI_BinomialBcast(&L ,1,MPI_CHAR ,0,MPI_COMM_WORLD);
 
@@ -104,8 +104,8 @@ int main(int argc, char *argv[])
     }
     int sum = 0;
 
-    ret = MPI_Reduce(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
-    //ret = MPI_FlatreeColective(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
+    //ret = MPI_Reduce(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
+    ret = MPI_FlatreeColective(&count, &sum, 1,MPI_INT,MPI_SUM, 0 , MPI_COMM_WORLD);
     if(ret != 0){
         printf("Error: MPI_BinomialBcast failed");
         exit(ret);

@@ -19,7 +19,7 @@
 unsigned int g_seed = 0;
 
 int fast_rand(void) {
-    g_seed = (214013*g_seed+2531011);
+    g_seed = (21413*g_seed+2531011);
     return (g_seed>>16) % 5;
 }
 
@@ -69,22 +69,16 @@ int main(int argc, char *argv[] ) {
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int *recvbuf, *recvbuf2;
-    int* dist = (int *) malloc(numprocs * sizeof(int));
-    int rem = M%numprocs;
-    int div = floor(M/numprocs);
-    for (int k = 0; k < numprocs-1; ++k) {
-        dist[k] = div;
-        if (rem!=0) {
-            dist[k]++;
-            rem--;
-        }
-    }
+    int *recvbuf1 = (int*) malloc (ceil(M/numprocs)*N*sizeof(int));
+    int *recvbuf2= (int*) malloc (ceil(M/numprocs)*N*sizeof(int));
+    result = (int *) malloc(M * sizeof(int));
+    int *result2 = (int *) malloc(M * sizeof(int));
 
-    if (rank == 0) {
+    int div = M/numprocs*N;
+    // if (rank == 0) {
         data1 = (int *) malloc(M * N * sizeof(int));
         data2 = (int *) malloc(M * N * sizeof(int));
-        result = (int *) malloc(M * sizeof(int));
+
         /* Initialize Matrices */
         for (i = 0; i < M; i++) {
             for (j = 0; j < N; j++) {
@@ -94,17 +88,18 @@ int main(int argc, char *argv[] ) {
             }
         }
         gettimeofday(&tv1, NULL);
-        MPI_Scatterv(data1,dist,0,MPI_CHAR,recvbuf,dist[rank-1],MPI_CHAR,0,MPI_COMM_WORLD);
-        MPI_Scatterv(data2,dist,0,MPI_CHAR,recvbuf,dist[rank-1],MPI_CHAR,0,MPI_COMM_WORLD);
-    }
-    for(i=0;i<dist[rank-1];i++) {
+
+    //}
+    MPI_Scatter(data1,div,MPI_CHAR,recvbuf1,div,MPI_CHAR,0,MPI_COMM_WORLD);
+    MPI_Scatter(data2,div,MPI_CHAR,recvbuf2,div,MPI_CHAR,0,MPI_COMM_WORLD);
+    for(i=0;i<div-1;i++) {
         result[i]=0;
         for(j=0;j<N;j++) {
-            result[i] += base_distance(recvbuf[i*N+j], recvbuf2[i*N+j]);
+            result2[i] += base_distance(recvbuf1[i*N+j], recvbuf2[i*N+j]);
         }
     }
     if(rank!=0 ){
-        MPI_Gatherv(result,dist[rank-1],MPI_INT,recvbuf,dist,0,MPI_INT,0,MPI_COMM_WORLD);
+        MPI_Gather(result2,div,MPI_INT,result,div,MPI_INT,0,MPI_COMM_WORLD);
     }
 
     gettimeofday(&tv2, NULL);

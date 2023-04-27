@@ -4,7 +4,7 @@
 #include <math.h>
 #include </usr/local/include/mpi.h>
 
-#define DEBUG 1
+#define DEBUG 9
 
 /* Translation of the DNA bases
    A -> 0
@@ -13,13 +13,13 @@
    T -> 3
    N -> 4*/
 
-#define M  16 // Number of sequences
+#define M  8 // Number of sequences
 #define N  4  // Number of bases per sequence
 
 unsigned int g_seed = 0;
 
 int fast_rand(void) {
-    g_seed = (2143*g_seed+2301);
+    g_seed = (2143*g_seed+201);
     return (g_seed>>16) % 5;
 }
 
@@ -69,7 +69,11 @@ int main(int argc, char *argv[] ) {
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int div = N*M/numprocs;
+
+    int rows = floor(M/numprocs);
+    int div = N*rows;
+
+
     int *recvbuf1 = (int*) malloc (div*sizeof(int));
     int *recvbuf2= (int*) malloc (div*sizeof(int));
     result = (int *) malloc(M * sizeof(int));
@@ -84,24 +88,37 @@ int main(int argc, char *argv[] ) {
             /* random with 20% gap proportion */
             data1[i * N + j] = fast_rand();
             data2[i * N + j] = fast_rand();
-            }
         }
+    }
+
     gettimeofday(&tv1, NULL);
+
     MPI_Scatter(data1,div,MPI_INT,recvbuf1,div,MPI_INT,0,MPI_COMM_WORLD);
     MPI_Scatter(data2,div,MPI_INT,recvbuf2,div,MPI_INT,0,MPI_COMM_WORLD);
-        for (i = 0; i < div/N; i++) {
-            result2[i] = 0;
-            for (j = 0; j < N; j++) {
-                result2[i] += base_distance(recvbuf1[i * N + j], recvbuf2[i * N + j]);
-            }
+
+    for (i = 0; i < rows; i++) {
+        result2[i] = 0;
+        for (j = 0; j < N; j++) {
+            result2[i] += base_distance(recvbuf1[i * N + j], recvbuf2[i * N + j]);
         }
+    }
 
     MPI_Gather(result2, div/N, MPI_INT, result, div/N, MPI_INT, 0, MPI_COMM_WORLD);
 
+    if(M%numprocs != 0 && rank == 0){
+        for (i = M - M%numprocs; i < M; i++) {
+            result[i] = 0;
+            for (j = 0; j < N; j++) {
+                result[i] += base_distance(data1[i * N + j], data2[i * N + j]);
+            }
+        }
+    }
 
     gettimeofday(&tv2, NULL);
 
     int microseconds = (tv2.tv_usec - tv1.tv_usec)+ 1000000 * (tv2.tv_sec - tv1.tv_sec);
+    printf ("Process number %d . Time (seconds) = %lf\n",rank, (double) microseconds/1E6);
+
     if(rank==0){
         /* Display result */
         if (DEBUG == 1) {

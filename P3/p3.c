@@ -4,7 +4,7 @@
 #include <math.h>
 #include </usr/local/include/mpi.h>
 
-#define DEBUG 9
+#define DEBUG 1
 
 /* Translation of the DNA bases
    A -> 0
@@ -19,9 +19,10 @@
 unsigned int g_seed = 0;
 
 int fast_rand(void) {
-    g_seed = (2143*g_seed+201);
+    g_seed = (214013*g_seed+2531011);
     return (g_seed>>16) % 5;
 }
+
 
 // The distance between two bases
 int base_distance(int base1, int base2){
@@ -52,32 +53,21 @@ int base_distance(int base1, int base2){
 
     return 2;
 }
-//theoretical lectures all about design
-//each task is comparing ONE LINE
-//divide in chunks of rows, each block is a task
-//SPMD implementation
-//use mpi_scatter
-//gather all in memory of p0
-//measure time in mpi_gather and time in mpi_scatter (time in communication)
-
 int main(int argc, char *argv[] ) {
 
     int i, j;
     int *data1, *data2;
-    int *result, numprocs, rank;
-    struct timeval tv1, tv2;
+    int numprocs, rank;
+    struct timeval tv1, tv2,tv3,tv4;
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     int rows = floor(M/numprocs);
     int div = N*rows;
+    int messtime =0, comptime=0;
 
-
-    int *recvbuf1 = (int*) malloc (div*sizeof(int));
-    int *recvbuf2= (int*) malloc (div*sizeof(int));
-    result = (int *) malloc(M * sizeof(int));
-    int *result2 = (int *) malloc(div/N* sizeof(int));
+    int recvbuf1[div],recvbuf2[div],result[M],result2[rows];
 
     data1 = (int *) malloc(M * N * sizeof(int));
     data2 = (int *) malloc(M * N * sizeof(int));
@@ -90,21 +80,32 @@ int main(int argc, char *argv[] ) {
             data2[i * N + j] = fast_rand();
         }
     }
+    gettimeofday(&tv3, NULL);
 
     gettimeofday(&tv1, NULL);
-
     MPI_Scatter(data1,div,MPI_INT,recvbuf1,div,MPI_INT,0,MPI_COMM_WORLD);
     MPI_Scatter(data2,div,MPI_INT,recvbuf2,div,MPI_INT,0,MPI_COMM_WORLD);
+    gettimeofday(&tv2, NULL);
+    messtime = (tv2.tv_usec - tv1.tv_usec)+ 1000000 * (tv2.tv_sec - tv1.tv_sec);
 
+    gettimeofday(&tv1, NULL);
     for (i = 0; i < rows; i++) {
         result2[i] = 0;
         for (j = 0; j < N; j++) {
             result2[i] += base_distance(recvbuf1[i * N + j], recvbuf2[i * N + j]);
+
         }
     }
+    gettimeofday(&tv2, NULL);
+    comptime = (tv2.tv_usec - tv1.tv_usec)+ 1000000 * (tv2.tv_sec - tv1.tv_sec);
 
-    MPI_Gather(result2, div/N, MPI_INT, result, div/N, MPI_INT, 0, MPI_COMM_WORLD);
 
+    gettimeofday(&tv1, NULL);
+    MPI_Gather(result2, rows, MPI_INT, result, rows, MPI_INT, 0, MPI_COMM_WORLD);
+    gettimeofday(&tv2, NULL);
+    messtime += (tv2.tv_usec - tv1.tv_usec)+ 1000000 * (tv2.tv_sec - tv1.tv_sec);
+
+    gettimeofday(&tv1, NULL);
     if(M%numprocs != 0 && rank == 0){
         for (i = M - M%numprocs; i < M; i++) {
             result[i] = 0;
@@ -113,11 +114,14 @@ int main(int argc, char *argv[] ) {
             }
         }
     }
-
     gettimeofday(&tv2, NULL);
+    comptime += (tv2.tv_usec - tv1.tv_usec)+ 1000000 * (tv2.tv_sec - tv1.tv_sec);
+    printf ("Message passing time process nº%d= %lfs\n",rank, (double) messtime/1E6);
+    printf ("Computation time process nº%d= %lfs\n",rank, (double) comptime/1E6);
+    gettimeofday(&tv4, NULL);
+    int microseconds = (tv4.tv_usec - tv3.tv_usec)+ 1000000 * (tv4.tv_sec - tv3.tv_sec);
 
-    int microseconds = (tv2.tv_usec - tv1.tv_usec)+ 1000000 * (tv2.tv_sec - tv1.tv_sec);
-    printf ("Process number %d . Time (seconds) = %lf\n",rank, (double) microseconds/1E6);
+    MPI_Finalize();
 
     if(rank==0){
         /* Display result */
@@ -139,14 +143,7 @@ int main(int argc, char *argv[] ) {
             printf ("Time (seconds) = %lf\n", (double) microseconds/1E6);
         }
     }
-    free (result);
-    free(result2);
-    free(recvbuf2);
-    free(recvbuf1);
     free(data1);
     free(data2);
-    MPI_Finalize();
-
-
     return 0;
 }

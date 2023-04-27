@@ -4,7 +4,7 @@
 #include <math.h>
 #include </usr/local/include/mpi.h>
 
-#define DEBUG 2
+#define DEBUG 1
 
 /* Translation of the DNA bases
    A -> 0
@@ -13,13 +13,13 @@
    T -> 3
    N -> 4*/
 
-#define M  8 // Number of sequences
-#define N  5  // Number of bases per sequence
+#define M  16 // Number of sequences
+#define N  4  // Number of bases per sequence
 
 unsigned int g_seed = 0;
 
 int fast_rand(void) {
-    g_seed = (21413*g_seed+2531011);
+    g_seed = (2143*g_seed+2301);
     return (g_seed>>16) % 5;
 }
 
@@ -69,38 +69,35 @@ int main(int argc, char *argv[] ) {
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    int *recvbuf1 = (int*) malloc (ceil(M/numprocs)*N*sizeof(int));
-    int *recvbuf2= (int*) malloc (ceil(M/numprocs)*N*sizeof(int));
+    int div = N*M/numprocs;
+    int *recvbuf1 = (int*) malloc (div*sizeof(int));
+    int *recvbuf2= (int*) malloc (div*sizeof(int));
     result = (int *) malloc(M * sizeof(int));
-    int *result2 = (int *) malloc(M * sizeof(int));
+    int *result2 = (int *) malloc(div/N* sizeof(int));
 
-    int div = M/numprocs*N;
-    // if (rank == 0) {
-        data1 = (int *) malloc(M * N * sizeof(int));
-        data2 = (int *) malloc(M * N * sizeof(int));
+    data1 = (int *) malloc(M * N * sizeof(int));
+    data2 = (int *) malloc(M * N * sizeof(int));
 
-        /* Initialize Matrices */
-        for (i = 0; i < M; i++) {
-            for (j = 0; j < N; j++) {
-                /* random with 20% gap proportion */
-                data1[i * N + j] = fast_rand();
-                data2[i * N + j] = fast_rand();
+    /* Initialize Matrices */
+    for (i = 0; i < M; i++) {
+        for (j = 0; j < N; j++) {
+            /* random with 20% gap proportion */
+            data1[i * N + j] = fast_rand();
+            data2[i * N + j] = fast_rand();
             }
         }
-        gettimeofday(&tv1, NULL);
-
-    //}
-    MPI_Scatter(data1,div,MPI_CHAR,recvbuf1,div,MPI_CHAR,0,MPI_COMM_WORLD);
-    MPI_Scatter(data2,div,MPI_CHAR,recvbuf2,div,MPI_CHAR,0,MPI_COMM_WORLD);
-    for(i=0;i<div-1;i++) {
-        result[i]=0;
-        for(j=0;j<N;j++) {
-            result2[i] += base_distance(recvbuf1[i*N+j], recvbuf2[i*N+j]);
+    gettimeofday(&tv1, NULL);
+    MPI_Scatter(data1,div,MPI_INT,recvbuf1,div,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Scatter(data2,div,MPI_INT,recvbuf2,div,MPI_INT,0,MPI_COMM_WORLD);
+        for (i = 0; i < div/N; i++) {
+            result2[i] = 0;
+            for (j = 0; j < N; j++) {
+                result2[i] += base_distance(recvbuf1[i * N + j], recvbuf2[i * N + j]);
+            }
         }
-    }
-    if(rank!=0 ){
-        MPI_Gather(result2,div,MPI_INT,result,div,MPI_INT,0,MPI_COMM_WORLD);
-    }
+
+    MPI_Gather(result2, div/N, MPI_INT, result, div/N, MPI_INT, 0, MPI_COMM_WORLD);
+
 
     gettimeofday(&tv2, NULL);
 
@@ -118,13 +115,21 @@ int main(int argc, char *argv[] ) {
             for(i=0;i<M;i++) {
                 printf(" %d \t ",result[i]);
             }
+            printf("\n");
+
         }
         else {
             printf ("Time (seconds) = %lf\n", (double) microseconds/1E6);
         }
     }
-
-    free(data1); free(data2); free(result);
+    free (result);
+    free(result2);
+    free(recvbuf2);
+    free(recvbuf1);
+    free(data1);
+    free(data2);
     MPI_Finalize();
+
+
     return 0;
 }

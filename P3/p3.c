@@ -64,18 +64,16 @@ int main(int argc, char *argv[] ) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     int rows = floor(M/numprocs);
-    int div = N*rows;
-    int messtime =0, comptime=0;
+    int chunk = N*rows;
+    int messtime, comptime;
 
-    int recvbuf1[div],recvbuf2[div],result[M],result2[rows];
+    int recvbuf1[chunk],recvbuf2[chunk],result[M],result2[rows];
 
     data1 = (int *) malloc(M * N * sizeof(int));
     data2 = (int *) malloc(M * N * sizeof(int));
 
-    /* Initialize Matrices */
     for (i = 0; i < M; i++) {
         for (j = 0; j < N; j++) {
-            /* random with 20% gap proportion */
             data1[i * N + j] = fast_rand();
             data2[i * N + j] = fast_rand();
         }
@@ -83,8 +81,8 @@ int main(int argc, char *argv[] ) {
     gettimeofday(&tv3, NULL);
 
     gettimeofday(&tv1, NULL);
-    MPI_Scatter(data1,div,MPI_INT,recvbuf1,div,MPI_INT,0,MPI_COMM_WORLD);
-    MPI_Scatter(data2,div,MPI_INT,recvbuf2,div,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Scatter(data1,chunk,MPI_INT,recvbuf1,chunk,MPI_INT,0,MPI_COMM_WORLD);
+    MPI_Scatter(data2,chunk,MPI_INT,recvbuf2,chunk,MPI_INT,0,MPI_COMM_WORLD);
     gettimeofday(&tv2, NULL);
     messtime = (tv2.tv_usec - tv1.tv_usec)+ 1000000 * (tv2.tv_sec - tv1.tv_sec);
 
@@ -96,16 +94,6 @@ int main(int argc, char *argv[] ) {
 
         }
     }
-    gettimeofday(&tv2, NULL);
-    comptime = (tv2.tv_usec - tv1.tv_usec)+ 1000000 * (tv2.tv_sec - tv1.tv_sec);
-
-
-    gettimeofday(&tv1, NULL);
-    MPI_Gather(result2, rows, MPI_INT, result, rows, MPI_INT, 0, MPI_COMM_WORLD);
-    gettimeofday(&tv2, NULL);
-    messtime += (tv2.tv_usec - tv1.tv_usec)+ 1000000 * (tv2.tv_sec - tv1.tv_sec);
-
-    gettimeofday(&tv1, NULL);
     if(M%numprocs != 0 && rank == 0){
         for (i = M - M%numprocs; i < M; i++) {
             result[i] = 0;
@@ -115,12 +103,19 @@ int main(int argc, char *argv[] ) {
         }
     }
     gettimeofday(&tv2, NULL);
-    comptime += (tv2.tv_usec - tv1.tv_usec)+ 1000000 * (tv2.tv_sec - tv1.tv_sec);
+    comptime = (tv2.tv_usec - tv1.tv_usec)+ 1000000 * (tv2.tv_sec - tv1.tv_sec);
+
+
+    gettimeofday(&tv1, NULL);
+    MPI_Gather(result2, rows, MPI_INT, result, rows, MPI_INT, 0, MPI_COMM_WORLD);
+    gettimeofday(&tv2, NULL);
+    messtime += (tv2.tv_usec - tv1.tv_usec)+ 1000000 * (tv2.tv_sec - tv1.tv_sec);
+
+
     printf ("Message passing time process nº%d= %lfs\n",rank, (double) messtime/1E6);
     printf ("Computation time process nº%d= %lfs\n",rank, (double) comptime/1E6);
     gettimeofday(&tv4, NULL);
     int microseconds = (tv4.tv_usec - tv3.tv_usec)+ 1000000 * (tv4.tv_sec - tv3.tv_sec);
-
     MPI_Finalize();
 
     if(rank==0){

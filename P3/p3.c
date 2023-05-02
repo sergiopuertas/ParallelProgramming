@@ -13,8 +13,8 @@
    T -> 3
    N -> 4*/
 
-#define M  8 // Number of sequences
-#define N  4  // Number of bases per sequence
+#define M  1000000 // Number of sequences
+#define N  200  // Number of bases per sequence
 
 unsigned int g_seed = 0;
 
@@ -56,7 +56,7 @@ int base_distance(int base1, int base2){
 int main(int argc, char *argv[] ) {
 
     int i, j;
-    int *data1, *data2;
+    int *data1, *data2, *recvbuf1,*recvbuf2,*result,*result2;
     int numprocs, rank;
     struct timeval tv1, tv2,tv3,tv4;
     MPI_Init(&argc, &argv);
@@ -64,10 +64,14 @@ int main(int argc, char *argv[] ) {
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
     int rows = floor(M/numprocs);
-    int chunk = N*rows;
+    int chunk = N * rows;
     int messtime, comptime;
 
-    int recvbuf1[chunk],recvbuf2[chunk],result[M],result2[rows];
+    recvbuf1 = (int *) malloc(chunk * sizeof(int));
+    recvbuf2 = (int *) malloc(chunk * sizeof(int));
+    result = (int *) malloc(M * sizeof(int));
+    result2 = (int *) malloc(rows * sizeof(int));
+
 
     data1 = (int *) malloc(M * N * sizeof(int));
     data2 = (int *) malloc(M * N * sizeof(int));
@@ -113,7 +117,7 @@ int main(int argc, char *argv[] ) {
 
 
     printf ("Message passing time process nº%d= %lfs\n",rank, (double) messtime/1E6);
-    printf ("Computation time process nº%d= %lfs\n",rank, (double) comptime/1E6);
+    printf ("Computation time process nº%d= %lfs\n\n",rank, (double) comptime/1E6);
     gettimeofday(&tv4, NULL);
     int microseconds = (tv4.tv_usec - tv3.tv_usec)+ 1000000 * (tv4.tv_sec - tv3.tv_sec);
     MPI_Finalize();
@@ -140,5 +144,10 @@ int main(int argc, char *argv[] ) {
     }
     free(data1);
     free(data2);
+    free(recvbuf1);
+    free(recvbuf2);
+    free(result);
+    free(result2);
+
     return 0;
 }

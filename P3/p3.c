@@ -67,21 +67,24 @@ int main(int argc, char *argv[] ) {
     int chunk = N * rows;
     int messtime, comptime;
 
-    recvbuf1 = (int *) malloc(chunk * sizeof(int));
-    recvbuf2 = (int *) malloc(chunk * sizeof(int));
-    result = (int *) malloc(M * sizeof(int));
-    result2 = (int *) malloc(rows * sizeof(int));
-
-
-    data1 = (int *) malloc(M * N * sizeof(int));
-    data2 = (int *) malloc(M * N * sizeof(int));
-
-    for (i = 0; i < M; i++) {
-        for (j = 0; j < N; j++) {
-            data1[i * N + j] = fast_rand();
-            data2[i * N + j] = fast_rand();
+    if(!rank){
+        data1 = (int *) malloc(M * N * sizeof(int));
+        data2 = (int *) malloc(M * N * sizeof(int));
+        result = (int *) malloc(M * sizeof(int));
+        for (i = 0; i < M; i++) {
+            for (j = 0; j < N; j++) {
+                data1[i * N + j] = fast_rand();
+                data2[i * N + j] = fast_rand();
+            }
         }
     }
+
+    recvbuf1 = (int *) malloc(chunk * sizeof(int));
+    recvbuf2 = (int *) malloc(chunk * sizeof(int));
+    result2 = (int *) malloc(rows * sizeof(int));
+    
+
+    
     gettimeofday(&tv3, NULL);
 
     gettimeofday(&tv1, NULL);
@@ -142,11 +145,14 @@ int main(int argc, char *argv[] ) {
             printf ("Time (seconds) = %lf\n", (double) microseconds/1E6);
         }
     }
-    free(data1);
-    free(data2);
+    if(!rank){
+        free(data1);
+        free(data2);
+        free(result);
+    }
+    
     free(recvbuf1);
     free(recvbuf2);
-    free(result);
     free(result2);
 
     return 0;
